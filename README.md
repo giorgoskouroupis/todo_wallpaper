@@ -17,6 +17,10 @@ At a glance:
 Suggested repo description:
 - Turn a markdown TODO list into a desktop wallpaper, with a self-contained local CLI mode and an OpenCode bootstrap mode.
 
+## Screenshot
+
+![todo_wallpaper demo](assets/todo_wallpaper_demo.png)
+
 ## Modes
 
 - `self-contained`: installs runtime scripts under `~/.local/share/todo_wallpaper` plus optional `systemd --user` watcher units
