@@ -1,0 +1,6 @@
+[Unit]
+Description=Render and apply TODO wallpaper
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/share/todo_wallpaper/scripts/run_wallpaper_job.sh %h/.config/todo_wallpaper/config.env

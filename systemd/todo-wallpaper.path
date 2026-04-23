@@ -1,0 +1,10 @@
+[Unit]
+Description=Watch TODO file for todo_wallpaper refresh
+
+[Path]
+PathChanged=%h/.local/share/todo_wallpaper/TODO.md
+PathModified=%h/.local/share/todo_wallpaper/TODO.md
+Unit=todo-wallpaper.service
+
+[Install]
+WantedBy=default.target
