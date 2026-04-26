@@ -17,7 +17,6 @@ while [ -L "$SELF_PATH" ]; do
 done
 
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$SELF_PATH")" && pwd)
-OPENCODE_BIN="${OPENCODE_BIN:-opencode}"
 AUTO_APPROVE=0
 
 . "$PROJECT_DIR/scripts/common.sh"
@@ -49,18 +48,6 @@ usage() {
   printf '  %s watch-on\n' "$0"
   printf '  %s watch-off\n' "$0"
   printf '  %s uninstall\n' "$0"
-}
-
-resolve_opencode_bin() {
-  if command -v "$OPENCODE_BIN" >/dev/null 2>&1; then
-    command -v "$OPENCODE_BIN"
-    return
-  fi
-  if [ -x "$HOME/.opencode/bin/opencode" ]; then
-    printf '%s\n' "$HOME/.opencode/bin/opencode"
-    return
-  fi
-  printf '\n'
 }
 
 while [ "$#" -gt 0 ]; do
@@ -102,10 +89,10 @@ case "$COMMAND" in
     ;;
 esac
 
-if [ "$MODE" = "opencode" ] && [ "$COMMAND" != "uninstall" ]; then
-  printf 'OpenCode-managed mode is bootstrap plus handoff.\n' >&2
-  printf 'Start OpenCode in: %s\n' "$PROJECT_DIR" >&2
-  printf 'Paste the handoff prompt shown by install.sh, or read OPENCODE_HANDOFF.md in this directory.\n' >&2
+if [ "$MODE" = "agent-skill" ] && [ "$COMMAND" != "uninstall" ]; then
+  printf 'agent-skill mode is operated by an agent through the installed runtime scripts.\n' >&2
+  printf 'Skill file: %s/agent/SKILL.md\n' "$PROJECT_DIR" >&2
+  printf 'Refresh primitive: %s/scripts/run_wallpaper_job.sh %s\n' "$PROJECT_DIR" "$DEFAULT_CONFIG_FILE" >&2
   exit 1
 fi
 

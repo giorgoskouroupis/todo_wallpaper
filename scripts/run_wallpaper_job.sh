@@ -38,7 +38,7 @@ if [ -n "${FONT_NAME:-}" ]; then
   set -- "$@" --font "$FONT_NAME"
 fi
 
-RENDERED_OUTPUT=$($@)
+RENDERED_OUTPUT=$("$@")
 RENDERED_OUTPUT=$(printf '%s\n' "$RENDERED_OUTPUT" | tail -n 1)
 
 if [ -z "$RENDERED_OUTPUT" ] || [ ! -f "$RENDERED_OUTPUT" ]; then

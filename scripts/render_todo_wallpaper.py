@@ -157,7 +157,7 @@ def parse_todo_lines(text: str) -> tuple[str, list[tuple[str, bool, str]]]:
             plain = re.sub(r"^[-*]\s+", "", line).strip()
             tasks.append((plain or line, False, "N"))
 
-    return title, tasks[:12]
+    return title, tasks
 
 
 def parse_bool(value: str | None) -> bool:
@@ -394,11 +394,12 @@ def render_wallpaper(
     scale_factor: float,
     box_position: str,
     display_order_priorities: bool,
+    font_name: str | None,
 ) -> None:
     text = todo_path.read_text(encoding="utf-8")
     title, tasks = parse_todo_lines(text)
     tasks = sort_tasks_for_display(tasks, display_order_priorities)
-    body_font_name = choose_body_font_name(tasks)
+    body_font_name = font_name.strip() if font_name and font_name.strip() else choose_body_font_name(tasks)
     layout_density = choose_layout_density(tasks)
     canvas_width = max(width, 1)
     canvas_height = max(height, 1)
@@ -651,6 +652,7 @@ def main() -> int:
         args.scale,
         args.box_position,
         parse_bool(args.display_order_priorities),
+        args.font,
     )
     if args.apply:
         apply_wallpaper(output_path, args.backend, args.screen)

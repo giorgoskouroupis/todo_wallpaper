@@ -22,8 +22,8 @@ INSTALL_DIR="$DEFAULT_INSTALL_DIR"
 CONFIG_DIR="$DEFAULT_CONFIG_DIR"
 UNIT_DIR="$DEFAULT_UNIT_DIR"
 BIN_DIR="$HOME/.local/bin"
-OPENCODE_BIN="${OPENCODE_BIN:-opencode}"
 INSTALLED_ITEMS=""
+TODO_FILE_SET="0"
 
 usage() {
   printf '%s\n' 'todo_wallpaper installer'
@@ -32,13 +32,13 @@ usage() {
   printf '\n'
   printf '%s\n' 'modes:'
   printf '%s\n' '  default      self-contained install with local command and optional watcher'
-  printf '%s\n' '  --opencode   minimal bootstrap plus OpenCode handoff'
+  printf '%s\n' '  --agent-skill install runtime plus model-agnostic agent skill, without CLI or watcher'
   printf '\n'
   printf '%s\n' 'options:'
-  printf '%s\n' '  --opencode                 install the OpenCode bootstrap flow instead of self-contained mode'
+  printf '%s\n' '  --agent-skill              install runtime plus model-agnostic agent skill instead of self-contained mode'
   printf '%s\n' '  --backend NAME             wallpaper backend to use; default: auto'
   printf '%s\n' '  --screen NAME              target screen; default: all'
-  printf '  --todo-file PATH           todo markdown path; default: %s\n' "$DEFAULT_INSTALL_DIR/TODO.md"
+  printf '  --todo-file PATH           todo markdown path; default: runtime TODO.md in self-contained mode, ~/TODO.md in agent-skill mode\n'
   printf '  --output-file PATH         rendered wallpaper path; default: %s\n' "$HOME/Pictures/Wallpapers/TODO/todo-wallpaper.png"
   printf '%s\n' '  --box-position POS         left, center, or right; default: right'
   printf '%s\n' '  --font NAME                optional preferred font name override'
@@ -53,29 +53,7 @@ usage() {
   printf '%s\n' '  - priorities use markdown checkbox markers such as [H], [M], and [ ]'
   printf '%s\n' '  - display ordering by priority is enabled by default through DISPLAY_ORDER_PRIORITIES=true'
   printf '%s\n' '  - self-contained mode installs the todo-wallpaper command under ~/.local/bin'
-  printf '%s\n' '  - OpenCode mode installs only the runtime toolkit and prints a first prompt suggestion'
-}
-
-resolve_opencode_bin() {
-  if command -v "$OPENCODE_BIN" >/dev/null 2>&1; then
-    command -v "$OPENCODE_BIN"
-    return
-  fi
-  if [ -x "$HOME/.opencode/bin/opencode" ]; then
-    printf '%s\n' "$HOME/.opencode/bin/opencode"
-    return
-  fi
-  printf '\n'
-}
-
-install_opencode() {
-  if ! command -v curl >/dev/null 2>&1; then
-    printf 'OpenCode CLI is missing, and curl is not available for automatic install.\n' >&2
-    printf 'Install OpenCode first, then re-run: %s --opencode\n' "$0" >&2
-    exit 1
-  fi
-  printf 'OpenCode CLI not found. Installing it now...\n'
-  curl -fsSL https://opencode.ai/install | bash
+  printf '%s\n' '  - agent-skill mode installs only runtime scripts, config, and a model-agnostic skill file'
 }
 
 record_installed() {
@@ -85,8 +63,8 @@ record_installed() {
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
-    --opencode)
-      MODE="opencode"
+    --agent-skill)
+      MODE="agent-skill"
       ENABLE_WATCHER="0"
       shift
       ;;
@@ -100,6 +78,7 @@ while [ "$#" -gt 0 ]; do
       ;;
     --todo-file)
       TODO_FILE="$2"
+      TODO_FILE_SET="1"
       shift 2
       ;;
     --output-file)
@@ -154,10 +133,18 @@ case "$BOX_POSITION" in
     ;;
 esac
 
+if [ "$MODE" = "agent-skill" ] && [ "$TODO_FILE_SET" = "0" ]; then
+  TODO_FILE="$HOME/TODO.md"
+fi
+
 ensure_pillow
 detect_system_details
-ensure_black_wallpaper
-mkdir -p "$(dirname "$TODO_FILE")" "$(dirname "$OUTPUT_FILE")" "$CONFIG_DIR" "$UNIT_DIR" "$INSTALL_DIR/scripts"
+if [ "$MODE" = "self-contained" ]; then
+  ensure_black_wallpaper
+  mkdir -p "$(dirname "$TODO_FILE")" "$(dirname "$OUTPUT_FILE")" "$CONFIG_DIR" "$UNIT_DIR" "$INSTALL_DIR/scripts"
+else
+  mkdir -p "$(dirname "$TODO_FILE")" "$(dirname "$OUTPUT_FILE")" "$CONFIG_DIR" "$INSTALL_DIR/scripts"
+fi
 
 cp "$PROJECT_DIR/scripts/common.sh" "$INSTALL_DIR/scripts/common.sh"
 cp "$PROJECT_DIR/scripts/edit_todo.py" "$INSTALL_DIR/scripts/edit_todo.py"
@@ -166,7 +153,9 @@ cp "$PROJECT_DIR/scripts/render_todo_wallpaper.py" "$INSTALL_DIR/scripts/render_
 cp "$PROJECT_DIR/scripts/apply_wallpaper.sh" "$INSTALL_DIR/scripts/apply_wallpaper.sh"
 cp "$PROJECT_DIR/.todo-wallpaper.env.example" "$INSTALL_DIR/.todo-wallpaper.env.example"
 cp "$PROJECT_DIR/uninstall.sh" "$INSTALL_DIR/uninstall.sh"
-cp "$PROJECT_DIR/OPENCODE_HANDOFF.md" "$INSTALL_DIR/OPENCODE_HANDOFF.md"
+cp "$PROJECT_DIR/AGENTS.md" "$INSTALL_DIR/AGENTS.md"
+mkdir -p "$INSTALL_DIR/agent"
+cp "$PROJECT_DIR/agent/SKILL.md" "$INSTALL_DIR/agent/SKILL.md"
 chmod +x \
   "$INSTALL_DIR/scripts/common.sh" \
   "$INSTALL_DIR/scripts/edit_todo.py" \
@@ -181,7 +170,8 @@ record_installed "$INSTALL_DIR/scripts/render_todo_wallpaper.py"
 record_installed "$INSTALL_DIR/scripts/apply_wallpaper.sh"
 record_installed "$INSTALL_DIR/.todo-wallpaper.env.example"
 record_installed "$INSTALL_DIR/uninstall.sh"
-record_installed "$INSTALL_DIR/OPENCODE_HANDOFF.md"
+record_installed "$INSTALL_DIR/AGENTS.md"
+record_installed "$INSTALL_DIR/agent/SKILL.md"
 
 if [ ! -f "$TODO_FILE" ]; then
   printf '# TODO\n\n- [ ] replace this with your real tasks\n' > "$TODO_FILE"
@@ -233,16 +223,6 @@ if [ "$MODE" = "self-contained" ]; then
   if [ "$ENABLE_WATCHER" = "1" ]; then
     systemctl --user enable --now todo-wallpaper.path
   fi
-else
-  OPENCODE_PATH=$(resolve_opencode_bin)
-  if [ -z "$OPENCODE_PATH" ]; then
-    install_opencode
-    OPENCODE_PATH=$(resolve_opencode_bin)
-  fi
-  if [ -z "$OPENCODE_PATH" ]; then
-    printf 'OpenCode CLI is still missing after install attempt.\n' >&2
-    exit 1
-  fi
 fi
 
 printf 'Installed todo_wallpaper\n'
@@ -257,8 +237,9 @@ if [ -n "$INSTALLED_ITEMS" ]; then
   printf 'Installed items:\n'
   printf ' - %s\n' "$INSTALLED_ITEMS"
 fi
-if [ "$MODE" = "opencode" ]; then
+if [ "$MODE" = "agent-skill" ]; then
   printf '\n'
-  printf 'OpenCode prompt:\n\n'
-  printf '%s\n' "I installed todo_wallpaper in $INSTALL_DIR using --opencode. I am now using OpenCode inside that installed runtime directory. Treat $INSTALL_DIR as the local runtime toolkit for this wallpaper workflow, not as the user's task repository. Before doing anything else, read ~/.config/todo_wallpaper/config.env and summarize the current setup: mode, configured TODO file path, configured wallpaper output path, configured box position, configured backend, and the backend/session you actually detect on this machine. Use only the local scripts in $INSTALL_DIR as the supported primitives: scripts/render_todo_wallpaper.py for rendering, scripts/apply_wallpaper.sh for wallpaper apply or clear, scripts/run_wallpaper_job.sh for the render-and-apply flow, and uninstall.sh for cleanup. Keep the real TODO markdown outside this runtime directory unless I explicitly ask otherwise. Respect the priority syntax already supported by the renderer: markdown checkboxes like [H], [M], or [ ] at the start of a task, for example '- [H] urgent task' and '- [M] important task'. Do not treat this as the self-contained watcher flow unless the config says so. After you inspect the config and local scripts, explain clearly what is already installed, what is safe to change, what commands or actions are available from this setup, and what the next sensible step is. If I already asked for an action, carry it out using this installed runtime instead of re-deriving the architecture."
+  printf 'Agent instructions: %s\n' "$INSTALL_DIR/AGENTS.md"
+  printf 'Agent skill: %s\n' "$INSTALL_DIR/agent/SKILL.md"
+  printf 'Agent refresh command: %s/scripts/run_wallpaper_job.sh %s\n' "$INSTALL_DIR" "$DEFAULT_CONFIG_FILE"
 fi

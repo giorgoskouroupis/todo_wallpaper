@@ -4,7 +4,7 @@ Turn a markdown TODO list into a desktop wallpaper.
 
 `todo_wallpaper` supports two modes:
 - a self-contained local install with a `todo-wallpaper` command and optional watcher
-- an OpenCode bootstrap flow that installs the toolkit and then hands control to OpenCode
+- a model-agnostic agent-skill install with runtime scripts, config, and skill instructions
 
 At a glance:
 - markdown priorities with `[H]`, `[M]`, and `[ ]`
@@ -15,7 +15,7 @@ At a glance:
 - uninstall cleanup for runtime, config, launcher, units, and generated wallpapers
 
 Suggested repo description:
-- Turn a markdown TODO list into a desktop wallpaper, with a self-contained local CLI mode and an OpenCode bootstrap mode.
+- Turn a markdown TODO list into a desktop wallpaper, with a self-contained local CLI mode and a model-agnostic agent-skill mode.
 
 ## Screenshot
 
@@ -24,7 +24,7 @@ Suggested repo description:
 ## Modes
 
 - `self-contained`: installs runtime scripts under `~/.local/share/todo_wallpaper` plus optional `systemd --user` watcher units
-- `opencode`: bootstraps the runtime, ensures OpenCode is available, then hands control to the user inside OpenCode
+- `agent-skill`: installs runtime scripts, config, and a model-agnostic skill file without installing a CLI wrapper, watcher, or model-specific tool
 
 ## Quick Start
 
@@ -36,10 +36,10 @@ Self-contained install:
 ./install.sh
 ```
 
-OpenCode bootstrap:
+Agent-skill install:
 
 ```bash
-./install.sh --opencode
+./install.sh --agent-skill
 ```
 
 After a self-contained installation, use the installed command:
@@ -102,15 +102,50 @@ Display ordering:
 - the markdown file is not rewritten just to reorder display
 - numbered edit commands follow the same display order, so `done`, `replace`, `change-priority`, and `remove` target the visible numbering
 
-For OpenCode mode:
+For agent-skill mode:
 
 ```bash
-./install.sh --opencode
-cd ~/.local/share/todo_wallpaper
-opencode
+./install.sh --agent-skill
 ```
 
-Inside OpenCode, paste the rich handoff prompt from `OPENCODE_HANDOFF.md`.
+Then start your agent in the installed runtime directory, or point it at the installed instructions:
+
+```bash
+cd ~/.local/share/todo_wallpaper
+```
+
+```text
+~/.local/share/todo_wallpaper/AGENTS.md
+```
+
+The full skill reference is installed at:
+
+```text
+~/.local/share/todo_wallpaper/agent/SKILL.md
+```
+
+The agent should read `~/.config/todo_wallpaper/config.env`, detect `MODE`, and use only the interface allowed by that mode.
+
+In `MODE=agent-skill`, the CLI is intentionally not installed. The agent edits the configured `TODO_FILE` or uses `edit_todo.py`, then refreshes with:
+
+```bash
+~/.local/share/todo_wallpaper/scripts/run_wallpaper_job.sh ~/.config/todo_wallpaper/config.env
+```
+
+By default, agent-skill mode stores the real TODO markdown at `~/TODO.md` so it stays outside the runtime directory.
+
+In `MODE=self-contained`, an agent may use the `todo-wallpaper` CLI only after verifying it exists. If the CLI is missing, the self-contained install is incomplete and should be repaired instead of falling back silently.
+
+Agentic best practices:
+
+- start by reading `~/.config/todo_wallpaper/config.env`
+- select the allowed interface from `MODE`
+- use `todo-wallpaper` only in `MODE=self-contained` and only if the command exists
+- never use `todo-wallpaper` in `MODE=agent-skill`
+- edit only the configured `TODO_FILE` unless changing the tool itself
+- use installed CLI/scripts instead of recreating renderer/backend logic
+- refresh explicitly once after task edits through the allowed interface
+- avoid watchers, systemd units, cron jobs, or provider-specific assumptions unless requested
 
 ## Demo File
 
@@ -126,7 +161,7 @@ Tested setup:
 - `niri`
 - `noctalia-shell` / QuickShell IPC wallpaper flow
 - self-contained mode
-- OpenCode bootstrap flow
+- agent-skill mode
 
 Implemented backends that should work, but were not all validated equally in this repo:
 
@@ -156,4 +191,4 @@ Practical disclaimer:
 - `config` prints the active config path and the key values in use.
 - `doctor` prints a small runtime/backend sanity report for debugging apply failures.
 - The self-contained mode can optionally enable a `systemd --user` watcher for file-triggered refreshes.
-- In OpenCode mode, the installer is only a bootstrap. OpenCode becomes the interface after handoff.
+- In agent-skill mode, the installer only provides runtime scripts, config, and model-agnostic agent instructions. The agent performs edits and refreshes explicitly.
