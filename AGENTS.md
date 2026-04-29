@@ -24,7 +24,7 @@ $INSTALL_DIR/scripts/apply_wallpaper.sh apply "$BACKEND" "$OUTPUT_FILE" "$SCREEN
 Rules:
 
 - Edit the configured `TODO_FILE`, not runtime implementation files, unless the user asks to change the tool itself.
-- Preserve task syntax: `[H]`, `[M]`, `[ ]`, and `[X]`.
+- Preserve task syntax: `[H]`, `[M]`, `[ ]`, `[D]`, `[DH]`, `[DM]`, and `[X]`.
 - Refresh explicitly after task edits using the interface allowed by `MODE`.
 - Do not enable watchers, systemd units, cron jobs, or background automation unless the user explicitly asks.
 - Do not install or assume any model-specific provider/tooling.

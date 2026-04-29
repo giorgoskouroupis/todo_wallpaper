@@ -7,7 +7,7 @@ Turn a markdown TODO list into a desktop wallpaper.
 - a model-agnostic agent-skill install with runtime scripts, config, and skill instructions
 
 At a glance:
-- markdown priorities with `[H]`, `[M]`, and `[ ]`
+- markdown priorities with `[H]`, `[M]`, and `[ ]`, plus active-task markers with `[D]`, `[DH]`, and `[DM]`
 - checked tasks stay visible and render scratched out
 - left, center, or right layout placement
 - display-only priority ordering without rewriting the source markdown
@@ -67,6 +67,7 @@ todo-wallpaper add -n 2 -H "urgent inserted task"
 todo-wallpaper replace -n 2 -M "important replacement"
 todo-wallpaper change-priority -n 2 high
 todo-wallpaper change-priority -n 2 -H
+todo-wallpaper doing -n 2
 todo-wallpaper done -n 2
 todo-wallpaper undone -n 2
 todo-wallpaper done -n 2 -n 4
@@ -78,11 +79,12 @@ Task editing semantics:
 - `add` appends by default, or inserts at `-n LINE` and pushes the following tasks down
 - `replace` updates a task in place at `-n LINE`
 - `change-priority` retags a task in place at `-n LINE` without changing its text
+- `doing` marks a task as active/currently being worked on while preserving its priority
 - `done` marks a task as checked so it stays visible and renders scratched out
 - `undone` reopens a checked task
 - `remove` deletes one or more tasks and reorders the remaining visible numbering
 - `list` shows the current 1-based task numbering used by the edit commands
-- `edit` opens the real TODO markdown in `$EDITOR`
+- `edit` opens the real TODO markdown in `$EDITOR`, or `nano` when `$EDITOR` is unset
 - line-targeting commands use `-n` / `--line-number` only, to avoid positional ambiguity
 - write operations create a `TODO.md.bak` backup beside the live todo file before saving
 
@@ -92,7 +94,17 @@ Priority syntax:
 - [H] urgent task
 - [M] important task
 - [ ] normal task
+- [D] actively doing normal task
+- [DH] actively doing urgent task
+- [DM] actively doing important task
 ```
+
+Doing markers:
+
+- `[D]` means doing with normal priority
+- `[DH]` means doing with high priority
+- `[DM]` means doing with medium priority
+- doing tasks render with a blue dot left of the number, while the number color still shows priority
 
 Display ordering:
 

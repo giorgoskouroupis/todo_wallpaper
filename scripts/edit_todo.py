@@ -63,6 +63,10 @@ def parse_args() -> argparse.Namespace:
     done_parser.add_argument("todo_file", type=Path)
     done_parser.add_argument("-n", "--line-number", dest="line_numbers", action="append", required=True)
 
+    doing_parser = subparsers.add_parser("doing", help="Mark one or more tasks as currently being worked on.")
+    doing_parser.add_argument("todo_file", type=Path)
+    doing_parser.add_argument("-n", "--line-number", dest="line_numbers", action="append", required=True)
+
     undone_parser = subparsers.add_parser("undone", help="Mark one or more tasks not done by 1-based task position.")
     undone_parser.add_argument("todo_file", type=Path)
     undone_parser.add_argument("-n", "--line-number", dest="line_numbers", action="append", required=True)
@@ -121,7 +125,19 @@ def parse_task_priority(line: str) -> str:
     marker = marker_match.group(1).strip().upper()
     if marker in {"H", "M"}:
         return marker
+    if marker in {"DH", "DM"}:
+        return marker[1:]
     return "N"
+
+
+def parse_task_doing(line: str) -> bool:
+    match = TASK_RE.match(line)
+    if not match:
+        return False
+    marker_match = re.search(r"\[([^\]]*)\]", match.group(1))
+    if not marker_match:
+        return False
+    return marker_match.group(1).strip().upper() in {"D", "DH", "DM"}
 
 
 def parse_bool(value: str | None) -> bool:
@@ -211,6 +227,23 @@ def set_done_state(lines: list[str], line_number: int, done: bool, display_order
     return lines
 
 
+def set_doing_state(lines: list[str], line_number: int, display_order_priorities: bool) -> list[str]:
+    indices = task_indices_in_display_order(lines, display_order_priorities)
+    if line_number < 1 or line_number > len(indices):
+        raise ValueError(f"task line number out of range: {line_number}")
+
+    index = indices[line_number - 1]
+    match = TASK_RE.match(lines[index])
+    if not match:
+        raise ValueError(f"task line number out of range: {line_number}")
+
+    prefix, task_text, suffix = match.groups()
+    priority = parse_task_priority(lines[index])
+    marker = {"H": "DH", "M": "DM", "N": "D"}[priority]
+    lines[index] = re.sub(r"\[[^\]]*\]", f"[{marker}]", prefix, count=1) + task_text + suffix
+    return lines
+
+
 def change_priority(lines: list[str], line_number: int, priority: str, display_order_priorities: bool) -> list[str]:
     indices = task_indices_in_display_order(lines, display_order_priorities)
     if line_number < 1 or line_number > len(indices):
@@ -222,7 +255,11 @@ def change_priority(lines: list[str], line_number: int, priority: str, display_o
         raise ValueError(f"task line number out of range: {line_number}")
 
     prefix, task_text, suffix = match.groups()
-    marker = {"high": "H", "medium": "M", "normal": " "}[priority]
+    priority_marker = {"high": "H", "medium": "M", "normal": ""}[priority]
+    if parse_task_doing(lines[index]):
+        marker = f"D{priority_marker}"
+    else:
+        marker = priority_marker or " "
     lines[index] = re.sub(r"\[[^\]]*\]", f"[{marker}]", prefix, count=1) + task_text + suffix
     return lines
 
@@ -280,6 +317,10 @@ def main() -> int:
         updated = lines
         for line_number in parse_remove_numbers(args.line_numbers):
             updated = set_done_state(updated, line_number, True, display_order_priorities)
+    elif args.command == "doing":
+        updated = lines
+        for line_number in parse_remove_numbers(args.line_numbers):
+            updated = set_doing_state(updated, line_number, display_order_priorities)
     elif args.command == "undone":
         updated = lines
         for line_number in parse_remove_numbers(args.line_numbers):

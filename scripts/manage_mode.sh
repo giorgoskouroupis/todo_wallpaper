@@ -12,7 +12,7 @@ CONFIG_PATH="${2:-$DEFAULT_CONFIG_FILE}"
 shift 2 || true
 
 if [ -z "$ACTION" ]; then
-  printf 'usage: %s <refresh|show|hide|status|config|doctor|watch-on|watch-off|list|edit|add|replace|change-priority|done|undone|remove|uninstall>\n' "$0" >&2
+  printf 'usage: %s <refresh|show|hide|status|config|doctor|watch-on|watch-off|list|edit|add|replace|change-priority|doing|done|undone|remove|uninstall>\n' "$0" >&2
   exit 2
 fi
 
@@ -93,7 +93,7 @@ case "$ACTION" in
     /usr/bin/python3 "$PROJECT_DIR/scripts/edit_todo.py" --display-order-priorities "$DISPLAY_ORDER_PRIORITIES" list "$TODO_FILE"
     ;;
   edit)
-    editor="${EDITOR:-vi}"
+    editor="${EDITOR:-nano}"
     exec "$editor" "$TODO_FILE"
     ;;
   watch-on)
@@ -133,6 +133,14 @@ case "$ACTION" in
       exit 2
     fi
     /usr/bin/python3 "$PROJECT_DIR/scripts/edit_todo.py" --display-order-priorities "$DISPLAY_ORDER_PRIORITIES" change-priority "$TODO_FILE" "$@"
+    "$PROJECT_DIR/scripts/run_wallpaper_job.sh" "$CONFIG_PATH"
+    ;;
+  doing)
+    if [ "$#" -lt 2 ]; then
+      printf 'usage: todo-wallpaper doing -n LINE [-n LINE ...]\n' >&2
+      exit 2
+    fi
+    /usr/bin/python3 "$PROJECT_DIR/scripts/edit_todo.py" --display-order-priorities "$DISPLAY_ORDER_PRIORITIES" doing "$TODO_FILE" "$@"
     "$PROJECT_DIR/scripts/run_wallpaper_job.sh" "$CONFIG_PATH"
     ;;
   done)

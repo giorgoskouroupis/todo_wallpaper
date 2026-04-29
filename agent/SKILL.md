@@ -69,6 +69,7 @@ In `MODE=self-contained`, use the installed CLI after verifying it exists:
 command -v todo-wallpaper
 todo-wallpaper list
 todo-wallpaper add -H "pay electricity bill"
+todo-wallpaper doing -n 2
 todo-wallpaper done -n 2
 todo-wallpaper refresh
 todo-wallpaper status
@@ -94,10 +95,14 @@ Preserve markdown checkbox task syntax:
 - [H] high priority task
 - [M] medium priority task
 - [ ] normal task
+- [D] doing normal priority task
+- [DH] doing high priority task
+- [DM] doing medium priority task
 - [X] completed task
 ```
 
 Checked tasks remain visible and render with strike-through styling.
+Doing tasks render with a blue dot left of the task number. The task number color still communicates priority.
 
 ## Agent Rules
 
@@ -172,6 +177,7 @@ Self-contained equivalents:
 ```bash
 todo-wallpaper list
 todo-wallpaper add -H "pay electricity bill"
+todo-wallpaper doing -n 2
 todo-wallpaper done -n 2
 todo-wallpaper refresh
 ```

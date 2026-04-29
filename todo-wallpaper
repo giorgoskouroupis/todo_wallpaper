@@ -40,6 +40,7 @@ usage() {
   printf '  %s add [-n LINE] [-H|--high|-M|--medium|-N|--normal] <task text>\n' "$0"
   printf '  %s replace -n LINE [-H|--high|-M|--medium|-N|--normal] <task text>\n' "$0"
   printf '  %s change-priority -n LINE (-H|--high|-M|--medium|-N|--normal|high|medium|normal)\n' "$0"
+  printf '  %s doing -n LINE [-n LINE ...]\n' "$0"
   printf '  %s done -n LINE [-n LINE ...]\n' "$0"
   printf '  %s undone -n LINE [-n LINE ...]\n' "$0"
   printf '  %s remove -n LINE [-n LINE ...]\n' "$0"
@@ -81,7 +82,7 @@ fi
 MODE="${MODE:-self-contained}"
 
 case "$COMMAND" in
-  refresh|show|hide|status|config|doctor|watch-on|watch-off|list|edit|add|replace|change-priority|done|undone|remove|uninstall)
+  refresh|show|hide|status|config|doctor|watch-on|watch-off|list|edit|add|replace|change-priority|doing|done|undone|remove|uninstall)
     ;;
   *)
     usage >&2

@@ -60,6 +60,7 @@ BODY = "#DCE5F0"
 MUTED = "#8FA1B8"
 ACCENT = "#ADC8E6"
 MARK = "#ADC8E6"
+DOING_MARK = "#7AB0FF"
 DIVIDER = (255, 255, 255, 20)
 LINE_GAP = 18
 PRIORITY_MARK_COLORS = {
@@ -131,9 +132,9 @@ def load_font(
     return ImageFont.load_default()
 
 
-def parse_todo_lines(text: str) -> tuple[str, list[tuple[str, bool, str]]]:
+def parse_todo_lines(text: str) -> tuple[str, list[tuple[str, bool, str, bool]]]:
     title = "TODO"
-    tasks: list[tuple[str, bool, str]] = []
+    tasks: list[tuple[str, bool, str, bool]] = []
 
     for raw_line in text.splitlines():
         line = raw_line.strip()
@@ -148,14 +149,17 @@ def parse_todo_lines(text: str) -> tuple[str, list[tuple[str, bool, str]]]:
             marker = match.group(1).strip().upper()
             task_text = match.group(2).strip()
             if marker in {"X", "*"}:
-                tasks.append((task_text, True, "N"))
+                tasks.append((task_text, True, "N", False))
+            elif marker in {"D", "DH", "DM"}:
+                priority = marker[1:] or "N"
+                tasks.append((task_text, False, priority, True))
             elif marker in PRIORITY_MARK_COLORS:
-                tasks.append((task_text, False, marker))
+                tasks.append((task_text, False, marker, False))
             else:
-                tasks.append((task_text, False, "N"))
+                tasks.append((task_text, False, "N", False))
         else:
             plain = re.sub(r"^[-*]\s+", "", line).strip()
-            tasks.append((plain or line, False, "N"))
+            tasks.append((plain or line, False, "N", False))
 
     return title, tasks
 
@@ -166,7 +170,7 @@ def parse_bool(value: str | None) -> bool:
     return value.strip().lower() not in {"0", "false", "no", "off"}
 
 
-def sort_tasks_for_display(tasks: list[tuple[str, bool, str]], enabled: bool) -> list[tuple[str, bool, str]]:
+def sort_tasks_for_display(tasks: list[tuple[str, bool, str, bool]], enabled: bool) -> list[tuple[str, bool, str, bool]]:
     if not enabled:
         return tasks
     indexed = list(enumerate(tasks))
@@ -208,7 +212,7 @@ def wrap_text(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, m
 
 def measure_list_block(
     draw: ImageDraw.ImageDraw,
-    tasks: list[tuple[str, bool, str]],
+    tasks: list[tuple[str, bool, str, bool]],
     body_font: ImageFont.ImageFont,
     mark_font: ImageFont.ImageFont,
     max_text_width: int,
@@ -217,7 +221,7 @@ def measure_list_block(
 ) -> tuple[int, list[list[str]]]:
     wrapped_tasks: list[list[str]] = []
     max_width = 0
-    for index, (task, _done, _priority) in enumerate(tasks, start=1):
+    for index, (task, _done, _priority, _doing) in enumerate(tasks, start=1):
         marker = f"{index:02d}"
         marker_width = draw.textbbox((0, 0), marker, font=mark_font)[2]
         wrapped = wrap_text(draw, task, body_font, max_text_width)
@@ -276,17 +280,17 @@ def detect_smallest_monitor_resolution() -> tuple[int, int]:
     return DEFAULT_WIDTH, DEFAULT_HEIGHT
 
 
-def choose_body_font_name(tasks: list[tuple[str, bool, str]]) -> str:
+def choose_body_font_name(tasks: list[tuple[str, bool, str, bool]]) -> str:
     task_count = len(tasks)
-    total_chars = sum(len(task) for task, _done, _priority in tasks)
+    total_chars = sum(len(task) for task, _done, _priority, _doing in tasks)
     if task_count >= 6 or total_chars > 90:
         return "IBM Plex Serif Light"
     return "IBM Plex Serif"
 
 
-def choose_layout_density(tasks: list[tuple[str, bool, str]]) -> float:
+def choose_layout_density(tasks: list[tuple[str, bool, str, bool]]) -> float:
     task_count = len(tasks)
-    total_chars = sum(len(task) for task, _done, _priority in tasks)
+    total_chars = sum(len(task) for task, _done, _priority, _doing in tasks)
     if task_count <= 6 and total_chars <= 90:
         return 1.08
     if task_count >= 8 or total_chars >= 180:
@@ -349,9 +353,9 @@ def draw_empty_state(
     draw.text((center_x - footer_width / 2, internal_height - scaled(150, fit_factor * layout_density)), footer, font=meta_font, fill=MUTED)
 
 
-def has_poor_wraps(tasks: list[tuple[str, bool, str]], wrapped_tasks: list[list[str]]) -> bool:
+def has_poor_wraps(tasks: list[tuple[str, bool, str, bool]], wrapped_tasks: list[list[str]]) -> bool:
     short_wrap_cases = 0
-    for (task, _done, _priority), wrapped in zip(tasks, wrapped_tasks):
+    for (task, _done, _priority, _doing), wrapped in zip(tasks, wrapped_tasks):
         words = len(task.split())
         if words < 4 or len(wrapped) < 2:
             continue
@@ -429,9 +433,9 @@ def render_wallpaper(
     layout = None
     for _ in range(18):
         title_font = load_font(scaled(112, fit_factor * layout_density), bold=False, font_type="title")
-        body_font = load_font(scaled(60, fit_factor * layout_density), bold=False, font_type="body", body_font_name=body_font_name)
+        body_font = load_font(scaled(48, fit_factor * layout_density), bold=False, font_type="body", body_font_name=body_font_name)
         meta_font = load_font(scaled(28, fit_factor * layout_density), bold=True)
-        mark_font = load_font(scaled(46, fit_factor * layout_density), bold=True)
+        mark_font = load_font(scaled(37, fit_factor * layout_density), bold=True)
 
         top = scaled(220, fit_factor * layout_density)
         number_column_width = scaled(120, fit_factor * layout_density)
@@ -499,9 +503,9 @@ def render_wallpaper(
 
     if layout is None:
         title_font = load_font(scaled(84, fit_factor * layout_density), bold=False, font_type="title")
-        body_font = load_font(scaled(44, fit_factor * layout_density), bold=False, font_type="body", body_font_name=body_font_name)
+        body_font = load_font(scaled(36, fit_factor * layout_density), bold=False, font_type="body", body_font_name=body_font_name)
         meta_font = load_font(scaled(22, fit_factor * layout_density), bold=True)
-        mark_font = load_font(scaled(34, fit_factor * layout_density), bold=True)
+        mark_font = load_font(scaled(27, fit_factor * layout_density), bold=True)
         top = scaled(180, fit_factor * layout_density)
         number_column_width = scaled(96, fit_factor * layout_density)
         text_gap = scaled(36, fit_factor * layout_density)
@@ -575,13 +579,28 @@ def render_wallpaper(
     body_line_box = draw.textbbox((0, 0), "Ag", font=body_font)
     body_line_height = body_line_box[3] - body_line_box[1]
 
-    for index, ((task, done, priority), wrapped) in enumerate(zip(tasks, wrapped_tasks), start=1):
+    doing_dot_gap = scaled(28, fit_factor * layout_density)
+    doing_dot_radius = max(3, scaled(7, fit_factor * layout_density))
+
+    for index, ((task, done, priority, doing), wrapped) in enumerate(zip(tasks, wrapped_tasks), start=1):
         marker = f"{index:02d}"
         marker_box = draw.textbbox((0, 0), marker, font=mark_font)
         marker_width = marker_box[2] - marker_box[0]
         marker_height = marker_box[3] - marker_box[1]
         marker_y = top + body_line_box[1] + (body_line_height - marker_height) / 2 - marker_box[1] - scaled(5, fit_factor * layout_density)
         marker_color = PRIORITY_MARK_COLORS.get(priority, MARK)
+        if doing and not done:
+            dot_center_x = block_left + number_column_width - marker_width - doing_dot_gap
+            dot_center_y = marker_y + marker_box[1] + marker_height / 2
+            draw.ellipse(
+                (
+                    dot_center_x - doing_dot_radius,
+                    dot_center_y - doing_dot_radius,
+                    dot_center_x + doing_dot_radius,
+                    dot_center_y + doing_dot_radius,
+                ),
+                fill=DOING_MARK,
+            )
         draw.text((block_left + number_column_width - marker_width, marker_y), marker, font=mark_font, fill=marker_color)
 
         line_top = top
