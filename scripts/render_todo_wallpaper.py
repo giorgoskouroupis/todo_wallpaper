@@ -547,40 +547,33 @@ def render_wallpaper(
     draw.text((content_center_x - date_width / 2, top), date_text.upper(), font=meta_font, fill=ACCENT)
     top += scaled(84, fit_factor * layout_density)
 
-    longest_row_half_width = 0
-    for wrapped in wrapped_tasks:
+    doing_dot_gap = scaled(28, fit_factor * layout_density)
+    doing_dot_radius = max(3, scaled(7, fit_factor * layout_density))
+    visible_content_left = float("inf")
+    visible_content_right = float("-inf")
+    for index, ((task, done, priority, doing), wrapped) in enumerate(zip(tasks, wrapped_tasks), start=1):
+        marker = f"{index:02d}"
+        marker_width = draw.textbbox((0, 0), marker, font=mark_font)[2]
+        marker_left = block_left + number_column_width - marker_width
+        row_left = marker_left
+        if doing and not done:
+            row_left = min(row_left, marker_left - doing_dot_gap - doing_dot_radius)
+        visible_content_left = min(visible_content_left, row_left)
         for wrapped_line in wrapped:
             wrapped_line_width = int(draw.textlength(wrapped_line, font=body_font))
-            row_left = block_left
-            row_right = text_left + wrapped_line_width
-            longest_row_half_width = max(
-                longest_row_half_width,
-                content_center_x - row_left,
-                row_right - content_center_x,
-            )
+            visible_content_right = max(visible_content_right, text_left + wrapped_line_width)
 
-    divider_content_half_width = max((title_width + 1) // 2, longest_row_half_width)
-    divider_half_width = divider_content_half_width + scaled(28, fit_factor * layout_density)
-    divider_side_padding = scaled(48, fit_factor * layout_density)
-    max_divider_half_width = max(
-        divider_content_half_width,
-        min(
-            content_center_x - block_left - divider_side_padding,
-            block_right - content_center_x - divider_side_padding,
-        ),
-    )
-    divider_half_width = min(divider_half_width, max_divider_half_width)
+    divider_padding = scaled(32, fit_factor * layout_density)
+    divider_left = max(0, visible_content_left - divider_padding)
+    divider_right = min(internal_width, visible_content_right + divider_padding)
     draw.line(
-        (content_center_x - divider_half_width, top, content_center_x + divider_half_width, top),
+        (divider_left, top, divider_right, top),
         fill=DIVIDER,
         width=max(1, scaled(4, fit_factor * layout_density)),
     )
     top += scaled(104, fit_factor * layout_density)
     body_line_box = draw.textbbox((0, 0), "Ag", font=body_font)
     body_line_height = body_line_box[3] - body_line_box[1]
-
-    doing_dot_gap = scaled(28, fit_factor * layout_density)
-    doing_dot_radius = max(3, scaled(7, fit_factor * layout_density))
 
     for index, ((task, done, priority, doing), wrapped) in enumerate(zip(tasks, wrapped_tasks), start=1):
         marker = f"{index:02d}"
